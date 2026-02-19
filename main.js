@@ -1,8 +1,11 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const Registry = require('winreg');
+
+// Hardware-Beschleunigung deaktivieren für weniger CPU-Last im Hintergrund
+app.disableHardwareAcceleration();
 
 let mainWindow;
 const dataPath = path.join(app.getPath('userData'), 'nebula_v3.json');
@@ -20,7 +23,6 @@ const saveGames = (games) => {
   fs.writeFileSync(dataPath, JSON.stringify(games, null, 2));
 };
 
-// Get Steam installation path from registry
 const getSteamPath = async () => {
   return new Promise((resolve) => {
     try {
@@ -28,7 +30,6 @@ const getSteamPath = async () => {
         hive: Registry.HKLM,
         key: '\\Software\\Valve\\Steam'
       });
-
       regKey.get('InstallPath', (err, item) => {
         if (err) resolve(null);
         else resolve(item.value);
@@ -39,44 +40,34 @@ const getSteamPath = async () => {
   });
 };
 
-// Parse Steam ACF manifest file to get game info
 const parseAcfFile = (filePath) => {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     const data = {};
     const lines = content.split('\n');
-
     lines.forEach(line => {
       const match = line.match(/"(.+?)"\s+"(.+?)"/);
-      if (match) {
-        data[match[1]] = match[2];
-      }
+      if (match) data[match[1]] = match[2];
     });
-
     return data;
   } catch (err) {
     return null;
   }
 };
 
-// Get list of installed Steam games
 const getSteamGames = async () => {
   const steamPath = await getSteamPath();
   if (!steamPath) return [];
-
   const steamAppsPath = path.join(steamPath, 'steamapps');
 
   try {
     if (!fs.existsSync(steamAppsPath)) return [];
-
     const files = fs.readdirSync(steamAppsPath);
     const games = [];
 
     files.forEach(file => {
       if (file.endsWith('.acf')) {
-        const acfPath = path.join(steamAppsPath, file);
-        const gameData = parseAcfFile(acfPath);
-
+        const gameData = parseAcfFile(path.join(steamAppsPath, file));
         if (gameData && gameData.appid) {
           games.push({
             appid: gameData.appid,
@@ -87,7 +78,6 @@ const getSteamGames = async () => {
         }
       }
     });
-
     return games;
   } catch (err) {
     return [];
@@ -104,7 +94,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: true // CPU-Sparmodus aktivieren
     }
   });
 
@@ -114,7 +105,6 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 ipcMain.handle('get-games', () => getGames());
-
 ipcMain.handle('get-steam-games', async () => getSteamGames());
 
 ipcMain.handle('add-game', async () => {
@@ -123,7 +113,6 @@ ipcMain.handle('add-game', async () => {
     filters: [{ name: 'Executables', extensions: ['exe'] }],
     properties: ['openFile']
   });
-
   if (exeResult.canceled) return null;
 
   const imgResult = await dialog.showOpenDialog(mainWindow, {
@@ -134,17 +123,16 @@ ipcMain.handle('add-game', async () => {
 
   const gamePath = exeResult.filePaths[0];
   const imagePath = imgResult.canceled ? null : imgResult.filePaths[0];
-  const gameName = path.basename(gamePath, '.exe');
 
-  const games = getGames();
   const newGame = {
     id: Date.now(),
-    name: gameName,
+    name: path.basename(gamePath, '.exe'),
     path: gamePath,
     image: imagePath,
     source: 'local'
   };
 
+  const games = getGames();
   games.push(newGame);
   saveGames(games);
   return newGame;
@@ -152,11 +140,7 @@ ipcMain.handle('add-game', async () => {
 
 ipcMain.handle('add-steam-game', async (event, steamGame) => {
   const games = getGames();
-
-  // Check if game already added
-  if (games.find(g => g.appid === steamGame.appid)) {
-    return null;
-  }
+  if (games.find(g => g.appid === steamGame.appid)) return null;
 
   const imgResult = await dialog.showOpenDialog(mainWindow, {
     title: `Select Cover Art for ${steamGame.name}`,
@@ -164,13 +148,11 @@ ipcMain.handle('add-steam-game', async (event, steamGame) => {
     properties: ['openFile']
   });
 
-  const imagePath = imgResult.canceled ? null : imgResult.filePaths[0];
-
   const newGame = {
     id: Date.now(),
     name: steamGame.name,
     appid: steamGame.appid,
-    image: imagePath,
+    image: imgResult.canceled ? null : imgResult.filePaths[0],
     source: 'steam'
   };
 
@@ -185,23 +167,24 @@ ipcMain.on('remove-game', (event, id) => {
 });
 
 ipcMain.on('launch-game', (event, game) => {
+  if (mainWindow) mainWindow.minimize(); // Versteckt den Launcher beim Spielen
+
   if (game.source === 'steam') {
-    // Launch Steam game via steam protocol
     const steamUrl = `steam://run/${game.appid}`;
-    const { execSync } = require('child_process');
-    try {
-      execSync(`start ${steamUrl}`, { shell: true, stdio: 'ignore' });
-    } catch (err) {
-      console.error('Failed to launch Steam game:', err);
-    }
-  } else {
-    // Launch local game
-    const child = spawn(game.path, [], {
-      detached: true,
-      stdio: 'ignore',
-      cwd: path.dirname(game.path)
+    exec(`start ${steamUrl}`, (err) => {
+      if (err) console.error('Failed to launch Steam game:', err);
     });
-    child.unref();
+  } else {
+    try {
+      const child = spawn(game.path, [], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: path.dirname(game.path)
+      });
+      child.unref();
+    } catch (err) {
+      console.error('Failed to launch local game:', err);
+    }
   }
 });
 
