@@ -80,12 +80,10 @@ The installer will be created in the `dist/` directory.
 
 ## License
 
-ISC
+MIT
 
 ## Author
 
 Shifu
 
----
 
-For issues or feature requests, please open an issue in the repository.
