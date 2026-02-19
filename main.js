@@ -110,7 +110,7 @@ ipcMain.handle('get-steam-games', async () => getSteamGames());
 ipcMain.handle('add-game', async () => {
   const exeResult = await dialog.showOpenDialog(mainWindow, {
     title: 'Select Game Executable',
-    filters: [{ name: 'Executables', extensions: ['exe'] }],
+    filters: [{ name: 'Executables', extensions: ['exe', 'bat'] }],
     properties: ['openFile']
   });
   if (exeResult.canceled) return null;
@@ -126,7 +126,7 @@ ipcMain.handle('add-game', async () => {
 
   const newGame = {
     id: Date.now(),
-    name: path.basename(gamePath, '.exe'),
+    name: path.basename(gamePath, path.extname(gamePath)),
     path: gamePath,
     image: imagePath,
     source: 'local'
@@ -176,12 +176,23 @@ ipcMain.on('launch-game', (event, game) => {
     });
   } else {
     try {
-      const child = spawn(game.path, [], {
-        detached: true,
-        stdio: 'ignore',
-        cwd: path.dirname(game.path)
-      });
-      child.unref();
+      const ext = path.extname(game.path).toLowerCase();
+      if (ext === '.bat') {
+        // Use cmd.exe + start to launch batch files detached
+        const child = spawn('cmd.exe', ['/c', 'start', '""', game.path], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: path.dirname(game.path)
+        });
+        child.unref();
+      } else {
+        const child = spawn(game.path, [], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: path.dirname(game.path)
+        });
+        child.unref();
+      }
     } catch (err) {
       console.error('Failed to launch local game:', err);
     }
