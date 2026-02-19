@@ -1,0 +1,33 @@
+{
+  "name": "gamelauncher",
+  "version": "1.0.1",
+  "description": "Local Game Launcher",
+  "main": "main.js",
+  "author": "Shifu",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.shifu.gamelauncher",
+    "productName": "Nebula Game Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/logo.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.4.1",
+    "electron-builder": "^26.8.1"
+  }
+}

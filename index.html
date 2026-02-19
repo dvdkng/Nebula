@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nebula</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="title-bar">
+    <div class="drag-region">NEBULA</div>
+    <div class="window-controls">
+      <button onclick="api.minimizeApp()">
+        <svg width="12" height="1" viewBox="0 0 12 1">
+          <rect width="12" height="1" fill="currentColor" />
+        </svg>
+      </button>
+      <button class="close-btn" onclick="api.closeApp()">
+        <svg width="12" height="12" viewBox="0 0 12 12">
+          <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <main class="container">
+    <header class="hero">
+     <div class="logo-container">
+      <img src="assets/logo.png" alt="Nebula - logo"> 
+      <h1>Nebula</h1>
+     </div>
+      <div class="actions">
+        <input type="text" id="search-bar" placeholder="Search collection...">
+        <button id="add-game-btn" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16">
+            <path d="M8 1V15M1 8H15" stroke="black" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="game-grid" class="game-grid"></div>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+
+</html>
