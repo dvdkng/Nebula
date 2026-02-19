@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('api', {
   removeGame: (id) => ipcRenderer.send('remove-game', id),
   launchGame: (game) => ipcRenderer.send('launch-game', game),
   minimizeApp: () => ipcRenderer.send('minimize-app'),
-  closeApp: () => ipcRenderer.send('close-app')
+  closeApp: () => ipcRenderer.send('close-app'),
+  saveGames: (games) => ipcRenderer.send('save-games', games) // NEW
 });

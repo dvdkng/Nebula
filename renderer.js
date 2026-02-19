@@ -1,40 +1,162 @@
 const gameGrid = document.getElementById('game-grid');
 const addGameBtn = document.getElementById('add-game-btn');
 const searchBar = document.getElementById('search-bar');
+const editModeBtn = document.getElementById('edit-mode-btn');
 
 let library = [];
+let isEditMode = false;
 
 async function init() {
   library = await api.getGames();
   render(library);
 }
 
+// Toggle Edit Mode
+editModeBtn.onclick = () => {
+  isEditMode = !isEditMode;
+  editModeBtn.classList.toggle('active', isEditMode);
+
+  if (isEditMode) {
+    searchBar.value = ''; // Clear search to avoid mixing up indexes while saving
+    searchBar.disabled = true;
+    searchBar.style.opacity = '0.3';
+  } else {
+    searchBar.disabled = false;
+    searchBar.style.opacity = '1';
+  }
+
+  render(library);
+};
+
 function render(games) {
   gameGrid.innerHTML = '';
 
-  games.forEach(game => {
-    const card = document.createElement('div');
-    card.className = 'game-card';
+  if (isEditMode) {
+    // --- LIST VIEW (EDIT MODE) ---
+    gameGrid.className = 'game-list';
 
-    const imgSrc = game.image ? `file://${game.image}` : '';
-    const badge = game.source === 'steam' ? '<span class="steam-badge">STEAM</span>' : '';
+    games.forEach(game => {
+      const item = document.createElement('div');
+      item.className = 'game-list-item';
+      item.dataset.id = game.id;
 
-    card.innerHTML = `
+      const imgSrc = game.image ? `file://${game.image}` : '';
+      const badge = game.source === 'steam' ? '<span class="steam-badge-list">STEAM</span>' : '';
+
+      item.innerHTML = `
+        <div class="drag-handle" draggable="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="9" x2="20" y2="9"></line>
+            <line x1="4" y1="15" x2="20" y2="15"></line>
+          </svg>
+        </div>
+        <div class="list-poster-wrapper">
             ${badge}
-            <button class="remove-btn" onclick="removeGame(event, ${game.id})" title="Remove from Library">
-               <svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <div class="poster-wrapper">
-                ${imgSrc ? `<img src="${imgSrc}" class="poster">` : `<div class="poster" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#333">NO COVER</div>`}
-            </div>
-            <div class="game-title">${game.name}</div>
-        `;
+            ${imgSrc ? `<img src="${imgSrc}" class="list-poster">` : `<div class="list-poster" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#333">NO COVER</div>`}
+        </div>
+        <input type="text" class="edit-name-input" value="${game.name}" placeholder="Game Title" spellcheck="false" />
+        <button class="remove-btn-list" onclick="removeGame(event, ${game.id})" title="Remove from Library">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      `;
 
-    card.onclick = () => api.launchGame(game);
-    gameGrid.appendChild(card);
+      // Live Name Updating
+      const input = item.querySelector('.edit-name-input');
+      input.addEventListener('change', (e) => {
+        const targetGame = library.find(g => g.id === game.id);
+        if (targetGame) {
+          targetGame.name = e.target.value;
+          api.saveGames(library);
+        }
+      });
+
+      // Drag and Drop Events - Only on drag handle
+      const dragHandle = item.querySelector('.drag-handle');
+      dragHandle.addEventListener('dragstart', () => {
+        item.classList.add('dragging');
+      });
+
+      dragHandle.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        updateLibraryOrder();
+      });
+
+      gameGrid.appendChild(item);
+    });
+
+  } else {
+    // --- GRID VIEW (NORMAL MODE) ---
+    gameGrid.className = 'game-grid';
+
+    games.forEach(game => {
+      const card = document.createElement('div');
+      card.className = 'game-card';
+
+      const imgSrc = game.image ? `file://${game.image}` : '';
+      const badge = game.source === 'steam' ? '<span class="steam-badge">STEAM</span>' : '';
+
+      card.innerHTML = `
+              ${badge}
+              <button class="remove-btn" onclick="removeGame(event, ${game.id})" title="Remove from Library">
+                 <svg width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <div class="poster-wrapper">
+                  ${imgSrc ? `<img src="${imgSrc}" class="poster">` : `<div class="poster" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:#333">NO COVER</div>`}
+              </div>
+              <div class="game-title">${game.name}</div>
+          `;
+
+      card.onclick = () => api.launchGame(game);
+      gameGrid.appendChild(card);
+    });
+  }
+}
+
+// Global Drag Over handler to calculate insert position dynamically
+gameGrid.addEventListener('dragover', (e) => {
+  if (!isEditMode) return;
+  e.preventDefault();
+
+  const afterElement = getDragAfterElement(gameGrid, e.clientY);
+  const draggable = document.querySelector('.dragging');
+  if (afterElement == null) {
+    gameGrid.appendChild(draggable);
+  } else {
+    gameGrid.insertBefore(draggable, afterElement);
+  }
+});
+
+// Helper function to find the right spot to drop the item
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.game-list-item:not(.dragging)')];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Synchronize DOM order to the Array and save it
+function updateLibraryOrder() {
+  const newOrderIds = Array.from(gameGrid.children).map(child => parseInt(child.dataset.id));
+  const newLibrary = [];
+
+  newOrderIds.forEach(id => {
+    const foundGame = library.find(g => g.id === id);
+    if (foundGame) newLibrary.push(foundGame);
   });
+
+  library = newLibrary;
+  api.saveGames(library);
 }
 
 async function removeGame(event, id) {
@@ -44,6 +166,7 @@ async function removeGame(event, id) {
 }
 
 searchBar.oninput = (e) => {
+  if (isEditMode) return;
   const term = e.target.value.toLowerCase();
   const filtered = library.filter(g => g.name.toLowerCase().includes(term));
   render(filtered);

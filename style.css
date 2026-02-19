@@ -118,8 +118,13 @@ h1 {
   width: 320px;
 }
 
+#search-bar:disabled {
+  cursor: not-allowed;
+}
+
 .icon-btn {
   background: var(--accent);
+  color: black;
   border: none;
   width: 46px;
   height: 46px;
@@ -135,7 +140,37 @@ h1 {
   transform: rotate(90deg) scale(1.1);
 }
 
-/* Game Grid */
+/* Title Bar Button Style */
+.title-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  width: 50px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.title-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Active State for Edit Mode Button */
+#edit-mode-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 2px;
+}
+
+#edit-mode-btn.active:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Grid View (Normal) */
 .game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -211,11 +246,140 @@ h1 {
 
 .game-card:hover .remove-btn {
   opacity: 1;
-
 }
 
 .remove-btn:hover {
   transform: scale(1.2);
+}
+
+/* --- List View (Edit Mode) --- */
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 800px;
+  /* Keep it centered and tidy */
+}
+
+.game-list-item {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  gap: 20px;
+  cursor: grab;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.game-list-item:active {
+  cursor: grabbing;
+}
+
+.game-list-item.dragging {
+  opacity: 0.4;
+  background: #111;
+  border-style: dashed;
+}
+
+.drag-handle {
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: 0.2s;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.list-poster-wrapper {
+  position: relative;
+  width: 50px;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #151515;
+  flex-shrink: 0;
+}
+
+.list-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-name-input {
+  flex-grow: 1;
+  background: transparent;
+  color: var(--text-main);
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 8px 0;
+  border-bottom: 1px solid transparent;
+  transition: 0.2s;
+}
+
+.edit-name-input:focus {
+  border-bottom: 1px solid var(--text-dim);
+}
+
+.remove-btn-list {
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+  padding: 8px;
+}
+
+.remove-btn-list:hover {
+  color: #e81123;
+  transform: scale(1.1);
+}
+
+/* Badges */
+.steam-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #0B1D2E;
+  color: #6b81a3;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 500;
+  z-index: 15;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+}
+
+.steam-badge-list {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  background: rgba(11, 29, 46, 0.9);
+  color: #6b81a3;
+  font-size: 7px;
+  padding: 2px 0;
+  font-weight: 600;
 }
 
 /* Custom Scrollbar */
@@ -236,22 +400,6 @@ h1 {
 
 .logo-container img {
   height: 80px;
-}
-
-/* Steam Badge */
-.steam-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: #0B1D2E;
-  color: #6b81a3;
-  padding: 3px 6px;
-  border-radius: 3px;
-  font-size: 8px;
-  font-weight: 500;
-  z-index: 15;
-  letter-spacing: 0.5px;
-  backdrop-filter: blur(8px);
 }
 
 /* Source Menu Modal */

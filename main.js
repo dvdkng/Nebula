@@ -107,6 +107,11 @@ app.whenReady().then(createWindow);
 ipcMain.handle('get-games', () => getGames());
 ipcMain.handle('get-steam-games', async () => getSteamGames());
 
+// NEW: Save the entire updated array (used after reordering or editing names)
+ipcMain.on('save-games', (event, games) => {
+  saveGames(games);
+});
+
 ipcMain.handle('add-game', async () => {
   const exeResult = await dialog.showOpenDialog(mainWindow, {
     title: 'Select Game Executable',
